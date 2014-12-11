@@ -33,7 +33,7 @@ class AssetGenPlugin implements Plugin<Project> {
     public static final String DIR = ".res-gen";
 
     def types = [
-        ldpi:0.5, 
+        ldpi:0.75, 
         mdpi: 1.0, 
         hdpi: 1.5, 
         xhdpi: 2.0,
