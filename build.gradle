@@ -1,0 +1,21 @@
+apply plugin: 'groovy'
+
+group = 'io.vokal.gradle'
+version = '0.1.0'
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile gradleApi()
+    compile localGroovy()
+    compile 'com.android.tools.build:gradle:1.0.0'
+    compile 'com.kenai.nbpwr:com-sun-pdfview:1.0.5-201003191900'
+}
