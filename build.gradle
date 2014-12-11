@@ -1,5 +1,4 @@
 apply plugin: 'groovy'
-apply plugin: 'nexus'
 
 group = 'io.vokal.gradle'
 version = '0.1.0'
@@ -7,10 +6,6 @@ version = '0.1.0'
 buildscript {
     repositories {
         jcenter()
-    }
-
-    dependencies {
-        classpath 'org.gradle.api.plugins:gradle-nexus-plugin:0.7'
     }
 }
 
@@ -23,49 +18,4 @@ dependencies {
     compile localGroovy()
     compile 'com.android.tools.build:gradle:1.0.0'
     compile 'com.kenai.nbpwr:com-sun-pdfview:1.0.5-201003191900'
-}
-
-jar {
-    manifest {
-        attributes 'Implementation-Title': 'Remote Android Test Service Gradle plugin',
-                'Implementation-Version': version,
-                'Built-By': System.getProperty("user.name"),
-                'Built-Date': new Date(),
-                'Built-JDK': System.getProperty("java.version")
-    }
-}
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '1.12'
-}
-
-modifyPom {
-    project {
-        artifactId 'rats'
-        name 'rats'
-        description 'Gradle Plugin for Remote Android Test Service Testing'
-        url 'https://github.com/wmbest2/rats-gradle-plugin'
-
-        scm {
-            url 'https://github.com/wmbest2/rats-gradle-plugin'
-            connection 'scm:git@github.com:wmbest2/rats-gradle-plugin.git'
-            developerConnection 'scm:git@github.com:wmbest2/rats-gradle-plugin.git'
-        }
-
-        licenses {
-            license {
-                name 'MIT'
-                url 'http://opensource.org/licenses/MIT'
-                distribution 'repo'
-            }
-        }
-
-        developers {
-            developer {
-                id 'wmbest2'
-                name 'William Best'
-                email 'wmbest2@gmail.com'
-            }
-        }
-    }
 }
