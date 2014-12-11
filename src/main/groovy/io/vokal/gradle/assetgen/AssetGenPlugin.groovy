@@ -30,8 +30,14 @@ import javax.inject.Inject
 class AssetGenPlugin implements Plugin<Project> {
     public static final String DIR = ".res-gen";
 
-    def types = ["ldpi", "mdpi", "hdpi", "xhdpi", "xxhdpi"]
-    def scale = [0.5, 1.0, 1.5, 2.0, 3.0]
+    def types = [
+        ldpi:0.5, 
+        mdpi: 1.0, 
+        hdpi: 1.5, 
+        xhdpi: 2.0,
+        xxhdpi: 3.0,
+        xxxhdpi: 4.0
+        ]
 
     Project project;
     void apply(Project project) {
@@ -47,9 +53,12 @@ class AssetGenPlugin implements Plugin<Project> {
 
             Path srcPath =  fs.getPath(root, "src", source.name)
             Path path = fs.getPath(srcPath.toString(), "res-pdf");
+            Path res = FileSystems.getDefault().getPath(srcPath.toString(), DIR);
+
+            // Always add incase there files are removed but generated is kept
+            source.res.srcDirs += res.toString()
+
             if (Files.exists(path)) {
-                source.res.srcDirs += DIR
-                Path res = FileSystems.getDefault().getPath(srcPath.toString(), DIR);
                 Files.walkFileTree(path,  new SimpleFileVisitor<Path>() {
                     @Override
                     public FileVisitResult visitFile(Path filePath, BasicFileAttributes attrs) throws IOException {
@@ -83,12 +92,12 @@ class AssetGenPlugin implements Plugin<Project> {
         //  create new image
         Rectangle rect = page.getBBox().getBounds();
 
-        types.eachWithIndex { density, index ->
+        types.each { density, scale ->
             Path folder = createFolder(output, density);
             String outputfile = String.format("%s/%s.png", folder, fileName); //Output File name
 
-            int width = rect.width * scale[index];
-            int height = rect.height * scale[index];
+            int width = rect.width * scale;
+            int height = rect.height * scale;
 
             Image img = page.getImage(width, height, null, null, false, true);
 
