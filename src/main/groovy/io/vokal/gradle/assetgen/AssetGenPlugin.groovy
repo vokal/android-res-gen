@@ -46,42 +46,43 @@ class AssetGenPlugin implements Plugin<Project> {
 
         this.project = project
         def hasApp = project.hasProperty('android')
-        project.extensions.create("io.vokal.resgen", AssetGenExtension)
+        project.extensions.create("resgen", AssetGenExtension)
+        project.afterEvaluate { 
+            def root = project.getProjectDir().getAbsolutePath();
+            def fs = FileSystems.getDefault();
 
-        def root = project.getProjectDir().getAbsolutePath();
-        def fs = FileSystems.getDefault();
+            project.android.sourceSets.each { source ->
 
-        project.android.sourceSets.each { source ->
+                Path srcPath =  fs.getPath(root, "src", source.name)
+                Path path = fs.getPath(srcPath.toString(), "res-pdf");
+                Path res = FileSystems.getDefault().getPath(srcPath.toString(), DIR);
 
-            Path srcPath =  fs.getPath(root, "src", source.name)
-            Path path = fs.getPath(srcPath.toString(), "res-pdf");
-            Path res = FileSystems.getDefault().getPath(srcPath.toString(), DIR);
+                // Always add incase there files are removed but generated is kept
+                source.res.srcDirs += res.toString()
 
-            // Always add incase there files are removed but generated is kept
-            source.res.srcDirs += res.toString()
-
-            if (Files.exists(path)) {
-                Path cache = FileSystems.getDefault().getPath(path.toString(), ".cache");
-                if (Files.notExists(cache)) {
-                    Files.createFile(cache)
-                    Files.write(cache, "{}".getBytes());
-                }
-
-                def slurper = new JsonSlurper(type: JsonParserType.INDEX_OVERLAY)
-                Map meta = new HashMap((Map) slurper.parse(cache.toFile()));
-
-                Files.walkFileTree(path,  new SimpleFileVisitor<Path>() {
-                    @Override
-                    public FileVisitResult visitFile(Path filePath, BasicFileAttributes attrs) throws IOException {
-                        if (!filePath.toString().endsWith(".cache")) {
-                            Long t = (Long) meta[filePath.fileName.toString()]
-                            long timestamp = t == null ? 0 : t
-                            meta[filePath.fileName.toString()] = (Long) generateAssets(res, filePath, timestamp)
-                        }
-                        return FileVisitResult.CONTINUE;
+                if (Files.exists(path)) {
+                    Path cache = FileSystems.getDefault().getPath(path.toString(), ".cache");
+                    if (Files.notExists(cache)) {
+                        Files.createFile(cache)
+                        Files.write(cache, "{}".getBytes());
                     }
-                })
-                Files.write(cache, JsonOutput.toJson(meta).getBytes())
+
+                    def slurper = new JsonSlurper(type: JsonParserType.INDEX_OVERLAY)
+                    Map meta = new HashMap((Map) slurper.parse(cache.toFile()));
+
+                    Files.walkFileTree(path,  new SimpleFileVisitor<Path>() {
+                        @Override
+                        public FileVisitResult visitFile(Path filePath, BasicFileAttributes attrs) throws IOException {
+                            if (!filePath.toString().endsWith(".cache")) {
+                                Long t = (Long) meta[filePath.fileName.toString()]
+                                long timestamp = t == null ? 0 : t
+                                meta[filePath.fileName.toString()] = (Long) generateAssets(res, filePath, timestamp)
+                            }
+                            return FileVisitResult.CONTINUE;
+                        }
+                    })
+                    Files.write(cache, JsonOutput.toJson(meta).getBytes())
+                }
             }
         }
     }
@@ -90,6 +91,10 @@ class AssetGenPlugin implements Plugin<Project> {
         Path folder = FileSystems.getDefault().getPath(path.toString(), "drawable-" + density);
         if (Files.notExists(folder)) Files.createDirectories(folder)
         return folder;
+    }
+
+    def filtered(map, densities) {
+        return map.findAll { densities.contains(it.key) }
     }
 
     private long generateAssets(Path output, Path file, long lastGenerated) {
@@ -109,7 +114,8 @@ class AssetGenPlugin implements Plugin<Project> {
             //  create new image
             Rectangle rect = page.getBBox().getBounds();
 
-            types.each { density, scale ->
+            def list = filtered(types, project.resgen.densities)
+            list.each { density, scale ->
                 Path folder = createFolder(output, density);
                 String outputfile = String.format("%s/%s.png", folder, fileName); //Output File name
 
