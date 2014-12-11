@@ -8,6 +8,8 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.ProjectConfigurationException
 
+import groovy.json.*
+
 import com.sun.pdfview.PDFFile;
 import com.sun.pdfview.PDFPage;
 import java.awt.Graphics;
@@ -59,13 +61,27 @@ class AssetGenPlugin implements Plugin<Project> {
             source.res.srcDirs += res.toString()
 
             if (Files.exists(path)) {
+                Path cache = FileSystems.getDefault().getPath(path.toString(), ".cache");
+                if (Files.notExists(cache)) {
+                    Files.createFile(cache)
+                    Files.write(cache, "{}".getBytes());
+                }
+
+                def slurper = new JsonSlurper(type: JsonParserType.INDEX_OVERLAY)
+                Map meta = new HashMap((Map) slurper.parse(cache.toFile()));
+
                 Files.walkFileTree(path,  new SimpleFileVisitor<Path>() {
                     @Override
                     public FileVisitResult visitFile(Path filePath, BasicFileAttributes attrs) throws IOException {
-                        generateAssets(res, filePath)
+                        if (!filePath.toString().endsWith(".cache")) {
+                            Long t = (Long) meta[filePath.fileName.toString()]
+                            long timestamp = t == null ? 0 : t
+                            meta[filePath.fileName.toString()] = (Long) generateAssets(res, filePath, timestamp)
+                        }
                         return FileVisitResult.CONTINUE;
                     }
                 })
+                Files.write(cache, JsonOutput.toJson(meta).getBytes())
             }
         }
     }
@@ -76,44 +92,48 @@ class AssetGenPlugin implements Plugin<Project> {
         return folder;
     }
 
-    private void generateAssets(Path output, Path file) {
+    private long generateAssets(Path output, Path file, long lastGenerated) {
         def fileName = file.fileName.toString().split("\\.")[0]
 
         //  load a pdf from a file
         File f = new File(file.toString());
-        RandomAccessFile raf = new RandomAccessFile(f, "r");
-        ReadableByteChannel ch = Channels.newChannel(new FileInputStream(f));
- 
-        FileChannel channel = raf.getChannel();
-        ByteBuffer buf = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());
-        PDFFile pdffile = new PDFFile(buf);
-        PDFPage page = pdffile.getPage(0);
+        if (lastGenerated < f.lastModified()) {
+            RandomAccessFile raf = new RandomAccessFile(f, "r");
+            ReadableByteChannel ch = Channels.newChannel(new FileInputStream(f));
+     
+            FileChannel channel = raf.getChannel();
+            ByteBuffer buf = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());
+            PDFFile pdffile = new PDFFile(buf);
+            PDFPage page = pdffile.getPage(0);
 
-        //  create new image
-        Rectangle rect = page.getBBox().getBounds();
+            //  create new image
+            Rectangle rect = page.getBBox().getBounds();
 
-        types.each { density, scale ->
-            Path folder = createFolder(output, density);
-            String outputfile = String.format("%s/%s.png", folder, fileName); //Output File name
+            types.each { density, scale ->
+                Path folder = createFolder(output, density);
+                String outputfile = String.format("%s/%s.png", folder, fileName); //Output File name
 
-            int width = rect.width * scale;
-            int height = rect.height * scale;
+                int width = rect.width * scale;
+                int height = rect.height * scale;
 
-            Image img = page.getImage(width, height, null, null, false, true);
+                Image img = page.getImage(width, height, null, null, false, true);
 
-            BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-            Graphics g = bufferedImage.createGraphics();
-            g.drawImage(img, 0, 0, null);
-            g.dispose();
+                BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+                Graphics g = bufferedImage.createGraphics();
+                g.drawImage(img, 0, 0, null);
+                g.dispose();
 
-            File out = new File(outputfile);
-            if (out.exists()) {
-                out.delete();
+                File out = new File(outputfile);
+                if (out.exists()) {
+                    out.delete();
+                }
+                ImageIO.write(bufferedImage, "png", out);
             }
-            ImageIO.write(bufferedImage, "png", out);
         }
+        return f.lastModified()
     }
 }
 
 class AssetGenExtension {
+    String[] densities = ["hdpi", "xhdpi", "xxhdpi"]
 }
