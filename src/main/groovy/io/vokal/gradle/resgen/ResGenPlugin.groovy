@@ -1,4 +1,4 @@
-package io.vokal.gradle.assetgen
+package io.vokal.gradle.resgen
 
 import com.android.annotations.NonNull;
 import com.android.annotations.Nullable;
@@ -29,7 +29,7 @@ import javax.imageio.ImageIO;
 
 import javax.inject.Inject
 
-class AssetGenPlugin implements Plugin<Project> {
+class ResGenPlugin implements Plugin<Project> {
     public static final String DIR = ".res-gen";
 
     def types = [
@@ -49,7 +49,7 @@ class AssetGenPlugin implements Plugin<Project> {
         def root = project.getProjectDir().getAbsolutePath();
         def fs = FileSystems.getDefault();
 
-        project.extensions.create("resgen", AssetGenExtension)
+        project.extensions.create("resgen", ResGenExtension)
         project.tasks.create(name: "generateResFiles") << { 
 
             project.android.sourceSets.each { source ->
@@ -187,6 +187,6 @@ class AssetGenPlugin implements Plugin<Project> {
     }
 }
 
-class AssetGenExtension {
+class ResGenExtension {
     String[] densities = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
 }
