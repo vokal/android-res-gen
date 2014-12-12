@@ -46,10 +46,11 @@ class AssetGenPlugin implements Plugin<Project> {
 
         this.project = project
         def hasApp = project.hasProperty('android')
+        def root = project.getProjectDir().getAbsolutePath();
+        def fs = FileSystems.getDefault();
+
         project.extensions.create("resgen", AssetGenExtension)
-        project.afterEvaluate { 
-            def root = project.getProjectDir().getAbsolutePath();
-            def fs = FileSystems.getDefault();
+        project.tasks.create(name: "generateResFiles") << { 
 
             project.android.sourceSets.each { source ->
 
@@ -85,7 +86,53 @@ class AssetGenPlugin implements Plugin<Project> {
                 }
             }
         }
+        project.tasks["preBuild"].dependsOn 'generateResFiles'
+
+        project.tasks.create(name: "clearResCache") << { 
+            project.android.sourceSets.each { source ->
+                Path srcPath =  fs.getPath(root, "src", source.name)
+                Path path = fs.getPath(srcPath.toString(), ".res-gen")
+                Path cache = FileSystems.getDefault().getPath(srcPath.toString(), "res-pdf", ".cache");
+
+                try { Files.deleteIfExists(cache); }
+                catch(IOException e) { /* ... */ }
+
+                if(Files.exists(path)) {
+                    deleteRecursively(path)
+                }
+            }
+        }
+
+        project.tasks["clean"].dependsOn 'clearResCache'
     }
+
+    private void deleteRecursively(Path path) {
+        Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                    if (exc == null) {
+                        Files.delete(dir);
+                        return FileVisitResult.CONTINUE;
+                    } else {
+                        // directory iteration failed; propagate exception
+                        throw exc;
+                    }
+                }
+            });
+    }
+
 
     private Path createFolder(Path path, String density) {
         Path folder = FileSystems.getDefault().getPath(path.toString(), "drawable-" + density);
@@ -141,5 +188,5 @@ class AssetGenPlugin implements Plugin<Project> {
 }
 
 class AssetGenExtension {
-    String[] densities = ["hdpi", "xhdpi", "xxhdpi"]
+    String[] densities = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
 }
