@@ -8,11 +8,14 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.ProjectConfigurationException
 
+import org.apache.pdfbox.pdmodel.*;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.rendering.*;
+
 import groovy.json.*
 
-import com.sun.pdfview.PDFFile;
-import com.sun.pdfview.PDFPage;
 import java.awt.Graphics;
+import java.awt.Color;
 import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
@@ -150,30 +153,24 @@ class ResGenPlugin implements Plugin<Project> {
         //  load a pdf from a file
         File f = new File(file.toString());
         if (lastGenerated < f.lastModified()) {
-            RandomAccessFile raf = new RandomAccessFile(f, "r");
-            ReadableByteChannel ch = Channels.newChannel(new FileInputStream(f));
-     
-            FileChannel channel = raf.getChannel();
-            ByteBuffer buf = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());
-            PDFFile pdffile = new PDFFile(buf);
-            PDFPage page = pdffile.getPage(0);
+            PDDocument document = PDDocument.load(f);
+            PDFRenderer renderer = new PDFRenderer(document);
 
-            //  create new image
-            Rectangle rect = page.getBBox().getBounds();
+            PDRectangle cropBox = document.getPage(0).getCropBox();
 
             def list = filtered(types, project.resgen.densities)
             list.each { density, scale ->
                 Path folder = createFolder(output, density);
                 String outputfile = String.format("%s/%s.png", folder, fileName); //Output File name
 
-                int width = rect.width * scale;
-                int height = rect.height * scale;
+                int width =  cropBox.getWidth() * scale;
+                int height = cropBox.getHeight() * scale;
 
-                Image img = page.getImage(width, height, null, null, false, true);
-
+                int resolution = 72 * scale;
                 BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
                 Graphics g = bufferedImage.createGraphics();
-                g.drawImage(img, 0, 0, null);
+                g.setBackground(new Color(0,0,0,0));
+                renderer.renderPageToGraphics(0, g, scale);
                 g.dispose();
 
                 File out = new File(outputfile);
@@ -182,6 +179,8 @@ class ResGenPlugin implements Plugin<Project> {
                 }
                 ImageIO.write(bufferedImage, "png", out);
             }
+
+            document.close()
         }
         return f.lastModified()
     }
