@@ -1,36 +1,17 @@
 package io.vokal.gradle.resgen
 
-import com.android.annotations.NonNull;
-import com.android.annotations.Nullable;
-import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
+import groovy.json.*
+import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.pdmodel.common.PDRectangle
+import org.apache.pdfbox.rendering.PDFRenderer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.ProjectConfigurationException
 
-import org.apache.pdfbox.pdmodel.*;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.rendering.*;
-
-import groovy.json.*
-
-import java.awt.Graphics;
-import java.awt.Color;
-import java.awt.Image;
-import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.RandomAccessFile;
+import javax.imageio.ImageIO
+import java.awt.*
+import java.awt.image.BufferedImage
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
-import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
-import javax.imageio.ImageIO;
-
-import javax.inject.Inject
 
 class ResGenPlugin implements Plugin<Project> {
     public static final String DIR = ".res-gen";
@@ -43,6 +24,24 @@ class ResGenPlugin implements Plugin<Project> {
         xxhdpi: 3.0,
         xxxhdpi: 4.0
         ]
+
+    static {
+        System.setProperty("java.awt.headless", "true")
+
+        // workaround for an Android Studio issue
+        try {
+            Class.forName(System.getProperty("java.awt.graphicsenv"))
+        } catch (ClassNotFoundException e) {
+            System.err.println("[WARN] java.awt.graphicsenv: " + e)
+            System.setProperty("java.awt.graphicsenv", "sun.awt.CGraphicsEnvironment")
+        }
+        try {
+            Class.forName(System.getProperty("awt.toolkit"))
+        } catch (ClassNotFoundException e) {
+            System.err.println("[WARN] awt.toolkit: " + e)
+            System.setProperty("awt.toolkit", "sun.lwawt.macosx.LWCToolkit")
+        }
+    }
 
     Project project;
     void apply(Project project) {
@@ -161,12 +160,12 @@ class ResGenPlugin implements Plugin<Project> {
             def list = filtered(types, project.resgen.densities)
             list.each { density, scale ->
                 Path folder = createFolder(output, density);
-                String outputfile = String.format("%s/%s.png", folder, fileName); //Output File name
+                fileName = fileName.toLowerCase().replace(" ", "_").replace("-", "_")
+                String outputfile = String.format("%s/%s.png", folder, fileName);
 
-                int width =  cropBox.getWidth() * scale;
-                int height = cropBox.getHeight() * scale;
+                int width =  Math.ceil(cropBox.getWidth() * scale);
+                int height = Math.ceil(cropBox.getHeight() * scale);
 
-                int resolution = 72 * scale;
                 BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
                 Graphics g = bufferedImage.createGraphics();
                 g.setBackground(new Color(0,0,0,0));
