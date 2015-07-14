@@ -1,7 +1,7 @@
-android-res-gen
+Android Resource Generator
 ===============
 
-Automatic res exporter plugin for android projects
+Automatic resource exporter plugin for android projects: generating density specific drawables from PDF files and styles from [TrueColors](https://github.com/vokal/TrueColors-OSX/blob/master/README.md) files.
 
 # Setup
 
@@ -61,7 +61,7 @@ Where densities are in the set: `["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]`
 - …
 - Profit
 
-If you have alternative resources for different configurations (language, orientation, smallest width) you can nest the structure in `res-gen` folder *(you must follow the [Qualifier name rules](http://developer.android.com/guide/topics/resources/providing-resources.html#QualifierRules) and order the nesting as Android expects)*:
+If you have alternative resources for different configurations (language, orientation, smallest width) you can nest the structure in `res-gen` folder:
 ~~~
 res-gen/
     en/
@@ -75,6 +75,7 @@ res-gen/
         land/
             background.pdf
 ~~~
+You must follow the [Qualifier name rules](http://developer.android.com/guide/topics/resources/providing-resources.html#QualifierRules) and order the nesting as Android expects. *(currently only accepts qualifiers listed before density (dpi) in the table)*
 
 Drawables are generated from PDF files as part of the build process or can be generated manually with gradle task `generateResFiles`.
 Generated drawables can be cleared out by the `clearResCache` task. The `clean` task also depends on this task.
@@ -95,5 +96,5 @@ android {
 }
 ~~~
 
-*NOTE: flavor folders should work, and create .res-gen folders specific to the flavor, you would need to setup the sourceSets.res.srcDir addition for Android Studio in the flavor block*
+*NOTE: flavor folders can have their own `res-gen` folder and will create resources specific to that flavor. You would need to setup the `res.srcDir` addition in the flavor block for Android Studio to pick them up properly*
 
