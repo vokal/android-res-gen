@@ -21,8 +21,10 @@ apply plugin: 'groovy'
 apply plugin: 'maven-publish'
 
 group = 'io.vokal.gradle'
-version = '0.2.0'
+version = '0.3.0'
 
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
 
 repositories {
     maven { url 'http://repository.apache.org/content/groups/snapshots/' }

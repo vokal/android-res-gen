@@ -1,7 +1,7 @@
-android-res-gen
+Android Resource Generator
 ===============
 
-Automatic res exporter plugin for android projects
+Automatic resource exporter plugin for android projects: generating density specific drawables from PDF files and styles from [TrueColors](https://github.com/vokal/TrueColors-OSX/blob/master/README.md) files.
 
 # Setup
 
@@ -19,7 +19,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:1.2.3'
-        classpath 'io.vokal.gradle:resgen:0.2.0'
+        classpath 'io.vokal.gradle:resgen:0.3.0'
     }
 }
 ~~~
@@ -33,7 +33,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:1.2.3'
-        classpath files('libs/android-res-gen-0.2.0.jar')
+        classpath files('libs/resgen-0.3.0.jar')
         classpath 'org.apache.pdfbox:pdfbox:2.0.0-SNAPSHOT'
     }
 }
@@ -57,18 +57,44 @@ Where densities are in the set: `["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]`
 
 
 # Usage
-- Place PDF assets in `/main/src/res-pdf` folder.
+- Place PDF assets and .truecolors file in `/main/src/res-gen` folder.
 - …
 - Profit
 
-Assets are generated as part of the build process or can be generated manually with gradle task `generateResFiles`.
-Assets are can be cleared out by the `clearResCache` task. The `clean` task also depends on this task.
-Assets will be re-generated automatically if a newer PDF is found in the `res-gen` folder.
+If you have alternative resources for different configurations (language, orientation, smallest width) you can nest the structure in `res-gen` folder:
+~~~
+res-gen/
+    en/
+        port/
+            background.pdf
+        land/
+            background.pdf
+    es/
+        port/
+            background.pdf
+        land/
+            background.pdf
+~~~
+You must follow the [Qualifier name rules](http://developer.android.com/guide/topics/resources/providing-resources.html#QualifierRules) and order the nesting as Android expects. *(currently only accepts qualifiers listed before density (dpi) in the table)*
 
-The project will build normally and assets will resolve correctly but to have Android Studio find the generated assets for use in the Layout Editor, add this to your `android` closure:
+Drawables are generated from PDF files as part of the build process or can be generated manually with gradle task `generateResFiles`.
+Generated drawables can be cleared out by the `clearResCache` task. The `clean` task also depends on this task.
+Drawables will be re-generated automatically if a newer PDF is found in the `res-gen` folder.
+
+True Colors files will create colors, dimens, strings and styles defining the fonts in the .truecolors file.  It will copy the fonts to the `fonts` folder in assets.  The styles have the `fontName` attribute which is the default used by [Calligraphy](https://github.com/chrisjenx/Calligraphy/blob/master/README.md#getting-started).  Setting up your Activity to wrap the base Context and using the styles in your xml layouts is all you should need to do by default.
+
+The project will build normally and assets will resolve correctly but to have Android Studio find the generated resources for use in the Layout Editor, add this near the bottom of the `android` closure (below `buildTypes`):
 ~~~gradle
 android {
+    buildTypes {
+        release {
+            …
+        }
+    }
+    
     sourceSets.main.res.srcDir 'src/main/.res-gen'
 }
 ~~~
+
+*NOTE: flavor folders can have their own `res-gen` folder and will create resources specific to that flavor. You would need to setup the `res.srcDir` addition in the flavor block for Android Studio to pick them up properly*
 
