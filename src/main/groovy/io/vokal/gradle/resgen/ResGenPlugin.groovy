@@ -157,11 +157,11 @@ class ResGenPlugin implements Plugin<Project> {
                                 def slurper = new JsonSlurper(type: JsonParserType.INDEX_OVERLAY)
                                 TrueColors data = slurper.parse(zip.getInputStream(entry))
                                 data.colors.each { color ->
-                                    def name = color.path.join("_").toLowerCase()
+                                    def name = color.path.join("_")
                                     colorMap.put(name, "#" + color.rgba.substring(7, 9) + color.rgba.substring(1, 7))
                                 }
                                 data.metrics.each { metric ->
-                                    def name = metric.path.join("_").toLowerCase()
+                                    def name = metric.path.join("_")
                                     dimenMap.put(name, "${metric.value}dp")
                                 }
                                 data.fonts.each { font ->
@@ -170,7 +170,7 @@ class ResGenPlugin implements Plugin<Project> {
                                     if (!fontMap.containsKey(fontName)) {
                                         fontMap.put(fontName, font.file_name)
                                     }
-                                    def name = font.path.join("_").toLowerCase()
+                                    def name = font.path.join("_")
                                     font.font_name = fontName
                                     styleMap.put(name, font)
                                 }
@@ -231,8 +231,8 @@ class ResGenPlugin implements Plugin<Project> {
                 def xml = new MarkupBuilder(writer)
                 xml.resources() {
                     styleMap.each { name, font ->
-                        def colorPath = font.color_path.join("_").toLowerCase()
-                        def metricPath = font.size_path.join("_").toLowerCase()
+                        def colorPath = font.color_path.join("_")
+                        def metricPath = font.size_path.join("_")
                         xml.style(name: name) {
                             item(name: "android:textColor", "@color/" + colorPath)
                             item(name: "android:textSize", "@dimen/" + metricPath)
