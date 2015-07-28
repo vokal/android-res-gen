@@ -19,7 +19,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:1.2.3'
-        classpath 'io.vokal.gradle:resgen:0.3.0'
+        classpath 'io.vokal.gradle:resgen:0.4.0'
     }
 }
 ~~~
@@ -33,7 +33,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:1.2.3'
-        classpath files('libs/resgen-0.3.0.jar')
+        classpath files('libs/resgen-0.4.0.jar')
         classpath 'org.apache.pdfbox:pdfbox:2.0.0-SNAPSHOT'
     }
 }
@@ -50,11 +50,14 @@ android {
 }
 
 resgen {
-   densities "hdpi", "xhdpi", "xxhdpi"
+   densities "hdpi", "xhdpi", "xxhdpi" // default: ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
+
+   // optional parameters
+   jpeg "bg_*", "exact_filename" // may contain wildcards (* or ?) or regex
+   jpegQuality 80 // default is 85 if only jpeg patterns specified
 }
 ~~~
-Where densities are in the set: `["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]`
-
+Where densities are in the set: `["ldpi", "mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]`
 
 # Usage
 - Place PDF assets and .truecolors file in `/main/src/res-gen` folder.
