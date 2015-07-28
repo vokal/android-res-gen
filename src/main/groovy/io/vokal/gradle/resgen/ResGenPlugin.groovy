@@ -11,7 +11,11 @@ import org.apache.pdfbox.rendering.PDFRenderer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
+import javax.imageio.IIOImage
 import javax.imageio.ImageIO
+import javax.imageio.ImageWriteParam
+import javax.imageio.ImageWriter
+import javax.imageio.stream.ImageOutputStream
 import java.awt.*
 import java.awt.image.BufferedImage
 import java.nio.file.*
@@ -19,6 +23,13 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.zip.ZipFile
 
 class ResGenPlugin implements Plugin<Project> {
+
+    public static class ResGenExtension {
+        String[] densities = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
+        String[] jpeg;
+        Integer jpegQuality;
+    }
+
     public static final String DIR = ".res-gen";
 
     def types = [
@@ -30,30 +41,14 @@ class ResGenPlugin implements Plugin<Project> {
             xxxhdpi: 4.0
     ]
 
-    static {
-        System.setProperty("java.awt.headless", "true")
-
-        // workaround for an Android Studio issue
-        try {
-            Class.forName(System.getProperty("java.awt.graphicsenv"))
-        } catch (ClassNotFoundException e) {
-            System.err.println("[WARN] java.awt.graphicsenv: " + e)
-            System.setProperty("java.awt.graphicsenv", "sun.awt.CGraphicsEnvironment")
-        }
-        try {
-            Class.forName(System.getProperty("awt.toolkit"))
-        } catch (ClassNotFoundException e) {
-            System.err.println("[WARN] awt.toolkit: " + e)
-            System.setProperty("awt.toolkit", "sun.lwawt.macosx.LWCToolkit")
-        }
-    }
-
     Project project;
+
+    String[] jpegPatterns = new String[0];
+    float    jpegQuality  = 0.85f;
 
     void apply(Project project) {
 
         this.project = project
-        def hasApp = project.hasProperty('android')
         def root = project.getProjectDir().getAbsolutePath();
         def fs = FileSystems.getDefault();
 
@@ -76,6 +71,16 @@ class ResGenPlugin implements Plugin<Project> {
 
                     def slurper = new JsonSlurper(type: JsonParserType.INDEX_OVERLAY)
                     Map meta = new HashMap((Map) slurper.parse(cache.toFile()));
+
+                    if (project.resgen.jpeg != null) {
+                        jpegPatterns = new String[project.resgen.jpeg.length]
+                        project.resgen.jpeg.eachWithIndex { wildcard, i ->
+                            jpegPatterns[i] = wildcardToRegex(wildcard)
+                        }
+                        if (project.resgen.jpegQuality != null) {
+                            jpegQuality = Math.min(100, Math.max(0, project.resgen.jpegQuality)) / 100.0f;
+                        }
+                    }
 
                     Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
                         @Override
@@ -294,29 +299,65 @@ class ResGenPlugin implements Plugin<Project> {
         if (lastGenerated < f.lastModified()) {
             PDDocument document = PDDocument.load(f);
             PDFRenderer renderer = new PDFRenderer(document);
-
             PDRectangle cropBox = document.getPage(0).getCropBox();
 
-            def list = filtered(types, project.resgen.densities)
-            list.each { density, scale ->
-                Path folder = createFolder(output.toString(), selector + density);
-                fileName = fileName.toLowerCase().replace(" ", "_").replace("-", "_")
-                String outputfile = String.format("%s/%s.png", folder, fileName);
-
-                int width = Math.ceil(cropBox.getWidth() * scale);
-                int height = Math.ceil(cropBox.getHeight() * scale);
-
-                BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-                Graphics g = bufferedImage.createGraphics();
-                g.setBackground(new Color(0, 0, 0, 0));
-                renderer.renderPageToGraphics(0, g, scale);
-                g.dispose();
-
-                File out = new File(outputfile);
-                if (out.exists()) {
-                    out.delete();
+            String format = "png"
+            Color bg = new Color(0, 0, 0 , 0)
+            int bufferType = BufferedImage.TYPE_INT_ARGB
+            jpegPatterns.find { regex ->
+                if (fileName.matches(regex)) {
+                    format = "jpg"
+                    bg = new Color(255, 255, 255)
+                    bufferType = BufferedImage.TYPE_INT_RGB
+                    return true
                 }
-                ImageIO.write(bufferedImage, "png", out);
+                return false
+            }
+
+            // get all image writers for format
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(format);
+            if (writers.hasNext()) {
+                ImageWriter writer = (ImageWriter) writers.next();
+                ImageWriteParam param = writer.getDefaultWriteParam();
+
+                def list = filtered(types, project.resgen.densities)
+                list.each { density, scale ->
+                    Path folder = createFolder(output.toString(), selector + density);
+                    fileName = fileName.toLowerCase().replace(" ", "_").replace("-", "_")
+                    String outputfile = String.format("%s/%s.%s", folder, fileName, format);
+
+                    int width = Math.ceil(cropBox.getWidth() * scale);
+                    int height = Math.ceil(cropBox.getHeight() * scale);
+
+                    BufferedImage bufferedImage = new BufferedImage(width, height, bufferType);
+                    Graphics g = bufferedImage.createGraphics();
+                    g.setBackground(bg);
+                    renderer.renderPageToGraphics(0, g, scale);
+                    g.dispose();
+
+                    File out = new File(outputfile);
+                    if (out.exists()) {
+                        out.delete();
+                    }
+
+                    ImageOutputStream ios = ImageIO.createImageOutputStream(out);
+                    writer.setOutput(ios);
+
+                    // compress to a given quality
+                    if ("jpg".equals(format)) {
+                        param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                        println "$fileName.$format $jpegQuality"
+                        param.setCompressionQuality(jpegQuality);
+                    }
+
+                    // appends a complete image stream containing a single image and
+                    //associated stream and image metadata and thumbnails to the output
+                    writer.write(null, new IIOImage(bufferedImage, null, null), param);
+
+                    // close all streams
+                    ios.close();
+                }
+                writer.dispose();
             }
 
             document.close()
@@ -324,10 +365,50 @@ class ResGenPlugin implements Plugin<Project> {
         return f.lastModified()
     }
 
-    static class ResGenExtension {
-        String[] densities = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
+    public static String wildcardToRegex(String wildcard) {
+        StringBuffer s = new StringBuffer(wildcard.length())
+        s.append('^')
+        int len = wildcard.length()
+        for (int i = 0; i < len; i++) {
+            char c = wildcard.charAt(i)
+            switch(c) {
+                case '*':
+                    s.append(".*")
+                    break
+                case '?':
+                    s.append(".")
+                    break
+            // escape special regexp-characters
+                case '(': case ')': case '[': case ']': case '$':
+                case '^': case '.': case '{': case '}': case '|':
+                case '\\':
+                    s.append("\\")
+                    s.append(c)
+                    break
+                default:
+                    s.append(c)
+                    break
+            }
+        }
+        s.append('$')
+        return(s.toString())
+    }
+
+    static {
+        System.setProperty("java.awt.headless", "true")
+
+        // workaround for an Android Studio issue
+        try {
+            Class.forName(System.getProperty("java.awt.graphicsenv"))
+        } catch (ClassNotFoundException e) {
+            System.err.println("[WARN] java.awt.graphicsenv: " + e)
+            System.setProperty("java.awt.graphicsenv", "sun.awt.CGraphicsEnvironment")
+        }
+        try {
+            Class.forName(System.getProperty("awt.toolkit"))
+        } catch (ClassNotFoundException e) {
+            System.err.println("[WARN] awt.toolkit: " + e)
+            System.setProperty("awt.toolkit", "sun.lwawt.macosx.LWCToolkit")
+        }
     }
 }
-
-
-
