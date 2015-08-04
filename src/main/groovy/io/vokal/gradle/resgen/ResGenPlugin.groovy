@@ -134,10 +134,8 @@ class ResGenPlugin implements Plugin<Project> {
     private void generateTrueColors(Path srcPath, Path gen) {
         def fs = FileSystems.getDefault();
 
-        Map<String, String> colorMap = new HashMap<>()
-        Map<String, String> dimenMap = new HashMap<>()
-        Map<String, String> fontMap = new HashMap<>()
-        Map<String, TrueColors.Font> styleMap = new HashMap<>()
+        ArrayList<TrueColors> trueColorsData = new ArrayList<TrueColors>()
+        Map<String, String> fontMap = new TreeMap<>()
 
         Path path = fs.getPath(srcPath.toString(), "res-gen");
 
@@ -161,24 +159,16 @@ class ResGenPlugin implements Plugin<Project> {
                             } else if (fileName.equals("flat-data.json")) {
                                 def slurper = new JsonSlurper(type: JsonParserType.INDEX_OVERLAY)
                                 TrueColors data = slurper.parse(zip.getInputStream(entry))
-                                data.colors.each { color ->
-                                    def name = color.path.join("_")
-                                    colorMap.put(name, "#" + color.rgba.substring(7, 9) + color.rgba.substring(1, 7))
-                                }
-                                data.metrics.each { metric ->
-                                    def name = metric.path.join("_")
-                                    dimenMap.put(name, "${metric.value}dp")
-                                }
                                 data.fonts.each { font ->
-                                    def fontName = font.font_name.replaceAll(/\B[A-Z]/) { '_' + it }
-                                            .replace("-", "_").toLowerCase()
-                                    if (!fontMap.containsKey(fontName)) {
-                                        fontMap.put(fontName, font.file_name)
-                                    }
-                                    def name = font.path.join("_")
+                                    def fontName = font.font_name
+                                            .replaceAll(/\B[A-Z]/) { '_' + it }
+                                            .replace("-", "_")
+                                            .replace(" ", "_")
+                                            .toLowerCase()
+                                    fontMap.put(fontName, font.file_name)
                                     font.font_name = fontName
-                                    styleMap.put(name, font)
                                 }
+                                trueColorsData.add(data)
                             }
                         }
                     }
@@ -187,55 +177,57 @@ class ResGenPlugin implements Plugin<Project> {
             })
         }
 
-        def hasValues = styleMap.size() > 0 || fontMap.size() > 0 || colorMap.size() > 0 || dimenMap.size() > 0
-        if (hasValues) {
+        if (trueColorsData.size() > 0) {
             Path values = FileSystems.getDefault().getPath(gen.toString(), "values");
             if (Files.notExists(values)) Files.createDirectories(values)
 
-            if (colorMap.size() > 0) {
-                def writer = new StringWriter()
-                def xml = new MarkupBuilder(writer)
-                xml.resources() {
-                    colorMap.each { name, color ->
-                        xml.color(name: name, color)
+            def writer = new StringWriter()
+            def xml = new MarkupBuilder(writer)
+
+            // write colors
+            xml.resources() {
+                trueColorsData.each { data ->
+                    data.colors.each { color ->
+                        def name = color.path.join("_")
+                        xml.color(name: name, "#" + color.rgba.substring(7, 9) + color.rgba.substring(1, 7))
                     }
                 }
-
-                File colors = new File(values.toString(), "colors.xml")
-                new GroovyPrintStream(colors).print(writer.toString())
             }
+            File colors = new File(values.toString(), "colors.xml")
+            new GroovyPrintStream(colors).print(writer.toString())
 
-            if (dimenMap.size() > 0) {
-                def writer = new StringWriter()
-                def xml = new MarkupBuilder(writer)
-                xml.resources() {
-                    dimenMap.each { name, dimen ->
-                        xml.dimen(name: name, dimen)
+            // write dimens
+            writer = new StringWriter()
+            xml = new MarkupBuilder(writer)
+            xml.resources() {
+                trueColorsData.each { data ->
+                    data.metrics.each { metric ->
+                        def name = metric.path.join("_")
+                        xml.dimen(name: name, "${metric.value}dp")
                     }
                 }
-
-                File dimens = new File(values.toString(), "dimens.xml")
-                new GroovyPrintStream(dimens).print(writer.toString())
             }
+            File dimens = new File(values.toString(), "dimens.xml")
+            new GroovyPrintStream(dimens).print(writer.toString())
 
-            if (fontMap.size() > 0) {
-                def writer = new StringWriter()
-                def xml = new MarkupBuilder(writer)
-                xml.resources() {
-                    fontMap.each { name, font ->
-                        xml.string(name: name, "fonts/" + font)
-                    }
+            // write font name strings
+            writer = new StringWriter()
+            xml = new MarkupBuilder(writer)
+            xml.resources() {
+                fontMap.each { name, font ->
+                    xml.string(name: name, "fonts/" + font)
                 }
-
-                File strings = new File(values.toString(), "strings.xml")
-                new GroovyPrintStream(strings).print(writer.toString())
             }
+            File strings = new File(values.toString(), "strings.xml")
+            new GroovyPrintStream(strings).print(writer.toString())
 
-            if (styleMap.size() > 0) {
-                def writer = new StringWriter()
-                def xml = new MarkupBuilder(writer)
-                xml.resources() {
-                    styleMap.each { name, font ->
+            // write font styles
+            writer = new StringWriter()
+            xml = new MarkupBuilder(writer)
+            xml.resources() {
+                trueColorsData.each { data ->
+                    data.fonts.each { font ->
+                        def name = font.path.join("_")
                         def colorPath = font.color_path.join("_")
                         def metricPath = font.size_path.join("_")
                         xml.style(name: name) {
@@ -245,10 +237,9 @@ class ResGenPlugin implements Plugin<Project> {
                         }
                     }
                 }
-
-                File styles = new File(values.toString(), "styles.xml")
-                new GroovyPrintStream(styles).print(writer.toString())
             }
+            File styles = new File(values.toString(), "styles.xml")
+            new GroovyPrintStream(styles).print(writer.toString())
         }
     }
 
