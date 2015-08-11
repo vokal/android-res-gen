@@ -228,12 +228,21 @@ class ResGenPlugin implements Plugin<Project> {
                 trueColorsData.each { data ->
                     data.fonts.each { font ->
                         def name = font.path.join("_")
-                        def colorPath = font.color_path.join("_")
-                        def metricPath = font.size_path.join("_")
-                        xml.style(name: name) {
-                            item(name: "android:textColor", "@color/" + colorPath)
-                            item(name: "android:textSize", "@dimen/" + metricPath)
-                            item(name: "fontPath", "@string/" + font.font_name)
+                        if (font.color_path != null && font.size_path != null) {
+                            def colorPath = font.color_path.join("_")
+                            def metricPath = font.size_path.join("_")
+                            xml.style(name: name) {
+                                item(name: "android:textColor", "@color/" + colorPath)
+                                item(name: "android:textSize", "@dimen/" + metricPath)
+                                item(name: "fontPath", "@string/" + font.font_name)
+                            }
+                        } else {
+                            if (font.color_path == null) {
+                                println "! missing  color: " + font.path.join(" > ")
+                            }
+                            if (font.size_path == null) {
+                                println "! missing metric: " + font.path.join(" > ")
+                            }
                         }
                     }
                 }
