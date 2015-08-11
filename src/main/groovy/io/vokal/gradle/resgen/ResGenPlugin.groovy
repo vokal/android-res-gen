@@ -193,7 +193,7 @@ class ResGenPlugin implements Plugin<Project> {
                     }
                 }
             }
-            File colors = new File(values.toString(), "colors.xml")
+            File colors = new File(values.toString(), "true_colors.xml")
             new GroovyPrintStream(colors).print(writer.toString())
 
             // write dimens
@@ -207,7 +207,7 @@ class ResGenPlugin implements Plugin<Project> {
                     }
                 }
             }
-            File dimens = new File(values.toString(), "dimens.xml")
+            File dimens = new File(values.toString(), "true_dimens.xml")
             new GroovyPrintStream(dimens).print(writer.toString())
 
             // write font name strings
@@ -218,7 +218,7 @@ class ResGenPlugin implements Plugin<Project> {
                     xml.string(name: name, "fonts/" + font)
                 }
             }
-            File strings = new File(values.toString(), "strings.xml")
+            File strings = new File(values.toString(), "true_strings.xml")
             new GroovyPrintStream(strings).print(writer.toString())
 
             // write font styles
@@ -238,7 +238,7 @@ class ResGenPlugin implements Plugin<Project> {
                     }
                 }
             }
-            File styles = new File(values.toString(), "styles.xml")
+            File styles = new File(values.toString(), "true_styles.xml")
             new GroovyPrintStream(styles).print(writer.toString())
         }
     }
