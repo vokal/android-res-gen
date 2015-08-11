@@ -55,6 +55,7 @@ resgen {
    // optional parameters
    jpeg "bg_*", "exact_filename" // may contain wildcards (* or ?) or regex
    jpegQuality 80 // default is 85 if only jpeg patterns specified
+   launcherIcon "ic_launcher" // exact name of app icon to be put in mipmap folders
 }
 ~~~
 Where densities are in the set: `["ldpi", "mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]`

@@ -28,6 +28,7 @@ class ResGenPlugin implements Plugin<Project> {
         String[] densities = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
         String[] jpeg;
         Integer jpegQuality;
+        String launcherIcon
     }
 
     public static final String DIR = ".res-gen";
@@ -45,6 +46,7 @@ class ResGenPlugin implements Plugin<Project> {
 
     String[] jpegPatterns = new String[0];
     float    jpegQuality  = 0.85f;
+    String   launcherIcon = null;
 
     void apply(Project project) {
 
@@ -81,6 +83,8 @@ class ResGenPlugin implements Plugin<Project> {
                             jpegQuality = Math.min(100, Math.max(0, project.resgen.jpegQuality)) / 100.0f;
                         }
                     }
+
+                    launcherIcon = project.resgen.launcherIcon
 
                     Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
                         @Override
@@ -280,8 +284,8 @@ class ResGenPlugin implements Plugin<Project> {
     }
 
 
-    private Path createFolder(String path, String qualifier) {
-        Path folder = FileSystems.getDefault().getPath(path, "drawable-" + qualifier);
+    private Path createFolder(String path, String type, String qualifier) {
+        Path folder = FileSystems.getDefault().getPath(path, type + "-" + qualifier);
         if (Files.notExists(folder)) Files.createDirectories(folder)
         return folder;
     }
@@ -320,9 +324,11 @@ class ResGenPlugin implements Plugin<Project> {
                 ImageWriter writer = (ImageWriter) writers.next();
                 ImageWriteParam param = writer.getDefaultWriteParam();
 
+                String type
                 def list = filtered(types, project.resgen.densities)
                 list.each { density, scale ->
-                    Path folder = createFolder(output.toString(), selector + density);
+                    type = (launcherIcon != null && fileName.startsWith(launcherIcon)) ? "mipmap" : "drawable"
+                    Path folder = createFolder(output.toString(), type, selector + density);
                     fileName = fileName.toLowerCase().replace(" ", "_").replace("-", "_")
                     String outputfile = String.format("%s/%s.%s", folder, fileName, format);
 
