@@ -50,14 +50,17 @@ android {
 }
 
 resgen {
-   densities "hdpi", "xhdpi", "xxhdpi" // default: ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
+   densities "mdpi", "hdpi", "xhdpi", "xxhdpi" // default: ["hdpi", "xhdpi", "xxhdpi"]
 
    // optional parameters
    jpeg "bg_*", "exact_filename" // may contain wildcards (* or ?) or regex
    jpegQuality 80 // default is 85 if only jpeg patterns specified
+   mipmap "ic_launcher", "*_image" // names of assets you would like in mipmap folders (wildcard or regex accepted)
+   mipmapDensities "hdpi", "xhdpi", "xxhdpi", "xxxhdpi" // densities for mipmaps, defaults to densities
 }
 ~~~
 Where densities are in the set: `["ldpi", "mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]`
+(xxxhdpi is only used for mipmapDensities)
 
 # Usage
 - Place PDF assets and .truecolors file in `/main/src/res-gen` folder.
