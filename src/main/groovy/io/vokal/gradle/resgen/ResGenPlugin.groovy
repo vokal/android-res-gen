@@ -25,10 +25,11 @@ import java.util.zip.ZipFile
 class ResGenPlugin implements Plugin<Project> {
 
     public static class ResGenExtension {
-        String[] densities = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
+        String[] densities = ["hdpi", "xhdpi", "xxhdpi"]
         String[] jpeg;
         Integer jpegQuality;
-        String launcherIcon
+        String[] mipmap;
+        String[] mipmapDensities = ["hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
     }
 
     public static final String DIR = ".res-gen";
@@ -46,7 +47,8 @@ class ResGenPlugin implements Plugin<Project> {
 
     String[] jpegPatterns = new String[0];
     float    jpegQuality  = 0.85f;
-    String   launcherIcon = null;
+
+    String[] mipmapPatterns = new String[0];
 
     void apply(Project project) {
 
@@ -84,7 +86,12 @@ class ResGenPlugin implements Plugin<Project> {
                         }
                     }
 
-                    launcherIcon = project.resgen.launcherIcon
+                    if (project.resgen.mipmap != null) {
+                        mipmapPatterns = new String[project.resgen.mipmap.length]
+                        project.resgen.mipmap.eachWithIndex { wildcard, i ->
+                            mipmapPatterns[i] = wildcardToRegex(wildcard)
+                        }
+                    }
 
                     Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
                         @Override
@@ -324,10 +331,21 @@ class ResGenPlugin implements Plugin<Project> {
                 ImageWriter writer = (ImageWriter) writers.next();
                 ImageWriteParam param = writer.getDefaultWriteParam();
 
-                String type
+
+                String type = "drawable"
                 def list = filtered(types, project.resgen.densities)
+                mipmapPatterns.find { regex ->
+                    if (fileName.matches(regex)) {
+                        type = "mipmap"
+                        if (project.resgen.mipmapDensities != null) {
+                            list = filtered(types, project.resgen.mipmapDensities)
+                        }
+                        return true
+                    }
+                    return false
+                }
+
                 list.each { density, scale ->
-                    type = (launcherIcon != null && fileName.startsWith(launcherIcon)) ? "mipmap" : "drawable"
                     Path folder = createFolder(output.toString(), type, selector + density);
                     fileName = fileName.toLowerCase().replace(" ", "_").replace("-", "_")
                     String outputfile = String.format("%s/%s.%s", folder, fileName, format);
