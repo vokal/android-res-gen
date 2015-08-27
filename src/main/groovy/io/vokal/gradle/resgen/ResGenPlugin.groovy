@@ -1,5 +1,6 @@
 package io.vokal.gradle.resgen
 
+import com.android.build.gradle.api.ApplicationVariant
 import groovy.io.GroovyPrintStream
 import groovy.json.JsonOutput
 import groovy.json.JsonParserType
@@ -63,9 +64,6 @@ class ResGenPlugin implements Plugin<Project> {
                 Path path = fs.getPath(srcPath.toString(), "res-gen");
                 Path res = FileSystems.getDefault().getPath(srcPath.toString(), DIR);
 
-                // Always add in case there files are removed but generated is kept
-                source.res.srcDirs += res.toString()
-
                 if (Files.exists(path)) {
                     Path cache = FileSystems.getDefault().getPath(path.toString(), ".cache");
                     if (Files.notExists(cache)) {
@@ -124,7 +122,7 @@ class ResGenPlugin implements Plugin<Project> {
         project.tasks.create(name: "clearResCache") << {
             project.android.sourceSets.each { source ->
                 Path srcPath = fs.getPath(root, "src", source.name)
-                Path path = fs.getPath(srcPath.toString(), ".res-gen")
+                Path path = fs.getPath(srcPath.toString(), DIR)
                 Path cache = FileSystems.getDefault().getPath(srcPath.toString(), "res-gen", ".cache");
 
                 try {
@@ -140,6 +138,14 @@ class ResGenPlugin implements Plugin<Project> {
         }
 
         project.tasks["clean"].dependsOn 'clearResCache'
+
+        project.afterEvaluate {
+            project.android.sourceSets.each { source ->
+                Path srcPath = fs.getPath(root, "src", source.name)
+                Path res = FileSystems.getDefault().getPath(srcPath.toString(), DIR);
+                source.res.srcDirs += res.toString()
+            }
+        }
     }
 
     private void generateTrueColors(Path srcPath, Path gen) {
@@ -171,7 +177,7 @@ class ResGenPlugin implements Plugin<Project> {
                                 def slurper = new JsonSlurper(type: JsonParserType.INDEX_OVERLAY)
                                 TrueColors data = slurper.parse(zip.getInputStream(entry))
                                 data.fonts.each { font ->
-                                    def fontName = font.font_name.replace(" ", "_")
+                                    def fontName = font.font_name.replace(" ", "_").replace("-", "_")
                                     font.font_name = fontName
                                     fontMap.put(fontName, font.file_name)
                                 }
