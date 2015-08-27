@@ -171,13 +171,9 @@ class ResGenPlugin implements Plugin<Project> {
                                 def slurper = new JsonSlurper(type: JsonParserType.INDEX_OVERLAY)
                                 TrueColors data = slurper.parse(zip.getInputStream(entry))
                                 data.fonts.each { font ->
-                                    def fontName = font.font_name
-                                            .replaceAll(/\B[A-Z]/) { '_' + it }
-                                            .replace("-", "_")
-                                            .replace(" ", "_")
-                                            .toLowerCase()
-                                    fontMap.put(fontName, font.file_name)
+                                    def fontName = font.font_name.replace(" ", "_")
                                     font.font_name = fontName
+                                    fontMap.put(fontName, font.file_name)
                                 }
                                 trueColorsData.add(data)
                             }
@@ -194,32 +190,19 @@ class ResGenPlugin implements Plugin<Project> {
 
             def writer = new StringWriter()
             def xml = new MarkupBuilder(writer)
+            def fontDimens = new HashSet<String>()
 
             // write colors
             xml.resources() {
                 trueColorsData.each { data ->
                     data.colors.each { color ->
-                        def name = color.path.join("_")
+                        def name = color.path.join("_").replace(" ", "_")
                         xml.color(name: name, "#" + color.rgba.substring(7, 9) + color.rgba.substring(1, 7))
                     }
                 }
             }
             File colors = new File(values.toString(), "true_colors.xml")
             new GroovyPrintStream(colors).print(writer.toString())
-
-            // write dimens
-            writer = new StringWriter()
-            xml = new MarkupBuilder(writer)
-            xml.resources() {
-                trueColorsData.each { data ->
-                    data.metrics.each { metric ->
-                        def name = metric.path.join("_")
-                        xml.dimen(name: name, "${metric.value}dp")
-                    }
-                }
-            }
-            File dimens = new File(values.toString(), "true_dimens.xml")
-            new GroovyPrintStream(dimens).print(writer.toString())
 
             // write font name strings
             writer = new StringWriter()
@@ -238,10 +221,11 @@ class ResGenPlugin implements Plugin<Project> {
             xml.resources() {
                 trueColorsData.each { data ->
                     data.fonts.each { font ->
-                        def name = font.path.join("_")
+                        def name = font.path.join("_").replace(" ", "_")
                         if (font.color_path != null && font.size_path != null) {
-                            def colorPath = font.color_path.join("_")
-                            def metricPath = font.size_path.join("_")
+                            def colorPath = font.color_path.join("_").replace(" ", "_")
+                            def metricPath = font.size_path.join("_").replace(" ", "_")
+                            fontDimens.add(metricPath)
                             xml.style(name: name) {
                                 item(name: "android:textColor", "@color/" + colorPath)
                                 item(name: "android:textSize", "@dimen/" + metricPath)
@@ -260,6 +244,25 @@ class ResGenPlugin implements Plugin<Project> {
             }
             File styles = new File(values.toString(), "true_styles.xml")
             new GroovyPrintStream(styles).print(writer.toString())
+
+            // write dimens
+            writer = new StringWriter()
+            xml = new MarkupBuilder(writer)
+            xml.resources() {
+                trueColorsData.each { data ->
+                    data.metrics.each { metric ->
+                        def name = metric.path.join("_").replace(" ", "_")
+                        if (fontDimens.contains(name)) {
+                            xml.dimen(name: name, "${metric.value}sp")
+                        } else {
+                            xml.dimen(name: name, "${metric.value}dp")
+                        }
+
+                    }
+                }
+            }
+            File dimens = new File(values.toString(), "true_dimens.xml")
+            new GroovyPrintStream(dimens).print(writer.toString())
         }
     }
 
