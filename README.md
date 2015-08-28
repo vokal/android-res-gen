@@ -88,19 +88,3 @@ Generated drawables can be cleared out by the `clearResCache` task. The `clean` 
 Drawables will be re-generated automatically if a newer PDF is found in the `res-gen` folder.
 
 True Colors files will create colors, dimens, strings and styles defining the fonts in the .truecolors file.  It will copy the fonts to the `fonts` folder in assets.  The styles have the `fontName` attribute which is the default used by [Calligraphy](https://github.com/chrisjenx/Calligraphy/blob/master/README.md#getting-started).  Setting up your Activity to wrap the base Context and using the styles in your xml layouts is all you should need to do by default.
-
-The project will build normally and assets will resolve correctly but to have Android Studio find the generated resources for use in the Layout Editor, add this near the bottom of the `android` closure (below `buildTypes`):
-~~~gradle
-android {
-    buildTypes {
-        release {
-            …
-        }
-    }
-    
-    sourceSets.main.res.srcDir 'src/main/.res-gen'
-}
-~~~
-
-*NOTE: flavor folders can have their own `res-gen` folder and will create resources specific to that flavor. You would need to setup the `res.srcDir` addition in the flavor block for Android Studio to pick them up properly*
-
