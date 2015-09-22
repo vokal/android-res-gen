@@ -31,6 +31,7 @@ class ResGenPlugin implements Plugin<Project> {
         Integer jpegQuality;
         String[] mipmap;
         String[] mipmapDensities = ["hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
+        Boolean useScalePixelDimens = true
     }
 
     public static final String DIR = ".res-gen";
@@ -63,6 +64,7 @@ class ResGenPlugin implements Plugin<Project> {
                 Path srcPath = fs.getPath(root, "src", source.name)
                 Path path = fs.getPath(srcPath.toString(), "res-gen");
                 Path res = FileSystems.getDefault().getPath(srcPath.toString(), DIR);
+                source.res.srcDirs += res.toString()
 
                 if (Files.exists(path)) {
                     Path cache = FileSystems.getDefault().getPath(path.toString(), ".cache");
@@ -231,7 +233,8 @@ class ResGenPlugin implements Plugin<Project> {
                         if (font.color_path != null && font.size_path != null) {
                             def colorPath = font.color_path.join("_").replace(" ", "_")
                             def metricPath = font.size_path.join("_").replace(" ", "_")
-                            fontDimens.add(metricPath)
+                            if (project.resgen.useScalePixelDimens)
+                                fontDimens.add(metricPath)
                             xml.style(name: name) {
                                 item(name: "android:textColor", "@color/" + colorPath)
                                 item(name: "android:textSize", "@dimen/" + metricPath)
@@ -379,7 +382,6 @@ class ResGenPlugin implements Plugin<Project> {
                     // compress to a given quality
                     if ("jpg".equals(format)) {
                         param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-                        println "$fileName.$format $jpegQuality"
                         param.setCompressionQuality(jpegQuality);
                     }
 
