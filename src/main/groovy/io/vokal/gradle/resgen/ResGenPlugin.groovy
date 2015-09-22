@@ -63,6 +63,7 @@ class ResGenPlugin implements Plugin<Project> {
                 Path srcPath = fs.getPath(root, "src", source.name)
                 Path path = fs.getPath(srcPath.toString(), "res-gen");
                 Path res = FileSystems.getDefault().getPath(srcPath.toString(), DIR);
+                source.res.srcDirs += res.toString()
 
                 if (Files.exists(path)) {
                     Path cache = FileSystems.getDefault().getPath(path.toString(), ".cache");
