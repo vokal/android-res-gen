@@ -1,7 +1,7 @@
 Android Resource Generator
 ===============
 
-Automatic resource exporter plugin for android projects: generating density specific drawables from PDF files and styles from [TrueColors](https://github.com/vokal/TrueColors-OSX/blob/master/README.md) files.
+Automatic resource exporter plugin for android projects: generating density specific drawables from PDF files.
 
 # Setup
 
@@ -18,8 +18,8 @@ buildscript {
         }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:1.2.3'
-        classpath 'io.vokal.gradle:resgen:0.4.5'
+        classpath 'com.android.tools.build:gradle:${toolsVersion}'
+        classpath 'io.vokal.gradle:resgen:0.5.0'
     }
 }
 ~~~
@@ -29,18 +29,28 @@ buildscript {
 buildscript {
     repositories {
         …
-        maven { url 'http://repository.apache.org/content/groups/snapshots/' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:1.2.3'
-        classpath files('libs/resgen-0.4.5.jar')
-        classpath 'org.apache.pdfbox:pdfbox:2.0.0-SNAPSHOT'
+        classpath 'com.android.tools.build:gradle:${toolsVersion}'
+        classpath files('libs/resgen-0.5.0.jar')
+        classpath 'org.apache.pdfbox:pdfbox:2.0.0-RC1'
     }
 }
 
 ~~~
 
 # Usage
+
+### Options
+
+ * __densities__           [_array of strings_] - Default: ["hdpi", "xhdpi", "xxhdpi"]
+ * __sourceDir__           [_string_]           - Default: "res-gen"
+ * __generatedDir__        [_string_]           - Default: ".res-gen"
+ * __jpeg__                [_array of strings_] - Usage: File pattern to match for jpeg rendering
+ * __jpegQuality__         [_float_]            - Usage: Quality Range from 0 to 100
+ * __mipmap__              [_array of strings_] - Usage: File pattern to match for mipmap rendering
+ * __mipmapDensities__     [_array of strings_] - Default: ["hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
+
 
 ~~~gradle
 apply plugin: 'com.android.application'
@@ -51,20 +61,21 @@ android {
 }
 
 resgen {
-   densities "mdpi", "hdpi", "xhdpi", "xxhdpi" // default: ["hdpi", "xhdpi", "xxhdpi"]
-
-   // optional parameters
+   densities "mdpi", "hdpi", "xhdpi", "xxhdpi" 
+   sourceDir "some-dir"
+   generatedDir ".hidden-dir" 
    jpeg "bg_*", "exact_filename" // may contain wildcards (* or ?) or regex
    jpegQuality 80 // default is 85 if only jpeg patterns specified
    mipmap "ic_launcher", "*_image" // names of assets you would like in mipmap folders (wildcard or regex accepted)
    mipmapDensities "hdpi", "xhdpi", "xxhdpi", "xxxhdpi" // densities for mipmaps, defaults to densities
-   useScalePixelDimens false // default is true
 }
 ~~~
+
+
 Densities are from the set: `["ldpi", "mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]`
 (xxxhdpi is only used for mipmapDensities)
 
-Place PDF assets and .truecolors file in `/main/src/res-gen` folder.
+Place PDF assets file in `/main/src/res-gen` folder (or whatever your sourceDir is set to.)
 
 If you have alternative resources for different configurations (language, orientation, smallest width) you can nest the structure in `res-gen` folder:
 ~~~
@@ -86,7 +97,4 @@ Drawables are generated from PDF files as part of the build process or can be ge
 Generated drawables can be cleared out by the `clearResCache` task. The `clean` task also depends on this task.
 Drawables will be re-generated automatically if a newer PDF is found in the `res-gen` folder.
 
-True Colors files will create colors, dimens, strings and styles defining the fonts in the .truecolors file.
-It will copy the fonts to the `fonts` folder in assets and any dimension used in a font style will be set to scaled pixels (unless disabled with `useScalePixelDimens false`).
-The styles have the `fontName` attribute which is the default used by [Calligraphy](https://github.com/chrisjenx/Calligraphy/blob/master/README.md#getting-started).
-Setting up your Activity to wrap the base Context and using the styles in your xml layouts is all you should need to do by default.
+If you change the generated file path, please manually delete any old generated items.

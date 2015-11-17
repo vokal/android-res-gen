@@ -26,15 +26,15 @@ import java.util.zip.ZipFile
 class ResGenPlugin implements Plugin<Project> {
 
     public static class ResGenExtension {
+        String   sourceDir = "res-gen"
+        String   generatedDir = ".res-gen"
         String[] densities = ["hdpi", "xhdpi", "xxhdpi"]
         String[] jpeg;
-        Integer jpegQuality;
+        Integer  jpegQuality;
         String[] mipmap;
         String[] mipmapDensities = ["hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
-        Boolean useScalePixelDimens = true
+        Boolean  useScalePixelDimens = true
     }
-
-    public static final String DIR = ".res-gen";
 
     def types = [
             ldpi   : 0.75,
@@ -62,8 +62,8 @@ class ResGenPlugin implements Plugin<Project> {
         project.tasks.create(name: "generateResFiles") << {
             project.android.sourceSets.each { source ->
                 Path srcPath = fs.getPath(root, "src", source.name)
-                Path path = fs.getPath(srcPath.toString(), "res-gen");
-                Path res = FileSystems.getDefault().getPath(srcPath.toString(), DIR);
+                Path path = fs.getPath(srcPath.toString(), project.resgen.sourceDir);
+                Path res = FileSystems.getDefault().getPath(srcPath.toString(), project.resgen.generatedDir);
                 source.res.srcDirs += res.toString()
 
                 if (Files.exists(path)) {
@@ -124,8 +124,8 @@ class ResGenPlugin implements Plugin<Project> {
         project.tasks.create(name: "clearResCache") << {
             project.android.sourceSets.each { source ->
                 Path srcPath = fs.getPath(root, "src", source.name)
-                Path path = fs.getPath(srcPath.toString(), DIR)
-                Path cache = FileSystems.getDefault().getPath(srcPath.toString(), "res-gen", ".cache");
+                Path path = fs.getPath(srcPath.toString(), project.resgen.generatedDir)
+                Path cache = FileSystems.getDefault().getPath(srcPath.toString(), project.resgen.sourceDir, ".cache");
 
                 try {
                     Files.deleteIfExists(cache);
@@ -144,7 +144,7 @@ class ResGenPlugin implements Plugin<Project> {
         project.afterEvaluate {
             project.android.sourceSets.each { source ->
                 Path srcPath = fs.getPath(root, "src", source.name)
-                Path res = FileSystems.getDefault().getPath(srcPath.toString(), DIR);
+                Path res = FileSystems.getDefault().getPath(srcPath.toString(), project.resgen.generatedDir);
                 source.res.srcDirs += res.toString()
             }
         }
@@ -156,7 +156,7 @@ class ResGenPlugin implements Plugin<Project> {
         ArrayList<TrueColors> trueColorsData = new ArrayList<TrueColors>()
         Map<String, String> fontMap = new TreeMap<>()
 
-        Path path = fs.getPath(srcPath.toString(), "res-gen");
+        Path path = fs.getPath(srcPath.toString(), project.resgen.sourceDir);
 
         if (Files.exists(path)) {
             Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
