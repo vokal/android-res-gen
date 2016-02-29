@@ -22,8 +22,18 @@ class ResGenPlugin implements Plugin<Project> {
         }
 
         project.afterEvaluate {
+            List<Density> densities = new ArrayList<>();
+            project.resgen.densities.each { String density ->
+                try {
+                    densities.add(Density.valueOf(density.toUpperCase()))
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
+            densities = densities.sort() // Keep order consistent
 
             RasterizeOptions rasterizeOptions = new RasterizeOptions()
+
             if (project.resgen.jpeg != null) {
                 rasterizeOptions.jpegPatterns = new String[project.resgen.jpeg.length]
                 project.resgen.jpeg.eachWithIndex { wildcard, i ->
@@ -33,12 +43,14 @@ class ResGenPlugin implements Plugin<Project> {
                     rasterizeOptions.jpegQuality = Math.min(100, Math.max(0, project.resgen.jpegQuality)) / 100.0f;
                 }
             }
+
             if (project.resgen.mipmap != null) {
                 rasterizeOptions.mipmapPatterns = new String[project.resgen.mipmap.length]
                 project.resgen.mipmap.eachWithIndex { wildcard, i ->
                     rasterizeOptions.mipmapPatterns[i] = wildcardToRegex(wildcard)
                 }
             }
+
             if (project.resgen.mipmapDensities != null) {
                 rasterizeOptions.mipmapDensities = new ArrayList<>()
                 project.resgen.mipmapDensities.each { String density ->
@@ -48,19 +60,8 @@ class ResGenPlugin implements Plugin<Project> {
                         // ignore
                     }
                 }
+                rasterizeOptions.mipmapDensities = rasterizeOptions.mipmapDensities.sort()
             }
-
-            List<Density> densities = new ArrayList<>();
-            project.resgen.densities.each { String density ->
-                try {
-                    densities.add(Density.valueOf(density.toUpperCase()))
-                } catch (Exception e) {
-                    // ignore
-                }
-            }
-
-            // Keep order consistent
-            densities = densities.sort()
 
             def variants = null
             if (project.android.hasProperty('applicationVariants')) {
@@ -71,71 +72,41 @@ class ResGenPlugin implements Plugin<Project> {
                 throw new IllegalStateException('Android project must have applicationVariants or libraryVariants!')
             }
 
+            HashMap<String, File> pdfMap = new HashMap<>()
+
             variants.all { variant ->
-                FileCollection pdfFiles = project.files()
-                FileCollection tcFiles = project.files()
-                variant.sourceSets.each { sourceSet ->
-                    FileCollection pdfCollection = sourceSet.pdf.filter { File file ->
+                def varNameCap = variant.name.capitalize()
+
+                variant.sourceSets.each { src ->
+                    FileCollection pdfCollection = src.pdf.filter { File file ->
                         file.name.endsWith '.pdf'
                     }
-                    FileCollection tcCollection = sourceSet.pdf.filter { File file ->
-                        file.name.endsWith '.truecolors'
+                    pdfCollection.each { pdf ->
+                        pdfMap.put(pdf.name, pdf)
                     }
-                    pdfFiles.from pdfCollection
-                    tcFiles.from tcCollection
                 }
 
-                if (pdfFiles.size() > 0) {
-                    String outDir = "$project.buildDir/generated/res/$flavorName/$buildType.name/resgen/"
-                    variant.sourceSets.each { sourceSet ->
-                        println sourceSet
-                        if (sourceSet.displayName == buildType.name &&
-                                !sourceSet.res.srcDirs.contains(outDir)) {
-                            sourceSet.res.srcDirs += outDir
-                        }
-                    }
+                if (pdfMap.size() > 0) {
+                    FileCollection pdfFiles = project.files(pdfMap.values())
+                    String outDir = "$project.buildDir/generated/res/resgen/$variant.dirName/"
 
-                    Task rasterizationTask = project.task("generateResFiles${variant.name.capitalize()}", type: RasterizeTask) {
+                    def rasterTaskName = "generate${varNameCap}ResRasterizePdf"
+                    Task rasterTask = project.task(rasterTaskName, type: RasterizeTask) {
                         sources = pdfFiles
                         outputDir = project.file(outDir)
                         includeDensities = densities
                         options = rasterizeOptions
                     }
 
-                    // Makes the magic happen (inserts resources so devs can use it)
-                    variant.registerResGeneratingTask(rasterizationTask, rasterizationTask.outputDir)
-                }
+                    // we would do this but Android Studio to see the generated resources
+                    // (maybe it will be fixed in the future, does not work as of 2.0-beta6)
+//                  variant.registerResGeneratingTask(rasterTask, rasterTask.outputDir)
 
-                if (tcFiles.size() > 0) {
-                    String outDir = "$project.buildDir/generated/res/$flavorName/$buildType.name/truecolors/"
-                    String assetsDir = null
-                    variant.sourceSets.each { sourceSet ->
-                        if (sourceSet.displayName == buildType.name &&
-                                !sourceSet.res.srcDirs.contains(outDir)) {
-                            sourceSet.res.srcDirs += outDir
-                        }
-                        if (sourceSet.displayName == flavorName || sourceSet.displayName == "main") {
-                            assetsDir = sourceSet.assets.srcDirs[0]
-                            if (!sourceSet.assets.srcDirs.contains(assetsDir)) {
-                                sourceSet.assets.srcDirs += assetsDir
-                            }
-                        }
-                    }
-                    Task truecolorsTask = project.task("processTrueColors${variant.name.capitalize()}", type: TrueColorsTask) {
-                        sources = tcFiles
-                        outputDir = project.file(outDir)
-                        assetFolder = project.file(assetsDir)
-                        useScalePixels = project.resgen.useScalePixelDimens
-                    }
-
-                    variant.registerResGeneratingTask(truecolorsTask, truecolorsTask.outputDir)
+                    // so, we register dependency directly and add outputs to most specific source set
+                    project.tasks["generate${varNameCap}Resources"].dependsOn(rasterTaskName)
+                    variant.sourceSets[variant.sourceSets.size() - 1].res.srcDirs += outDir
                 }
             }
-
-//            project.task("preBuildResSetup", type: SetupTask) {
-//                proj = project
-//            }
-//            project.tasks["preBuild"].dependsOn 'preBuildResSetup'
         }
     }
 
