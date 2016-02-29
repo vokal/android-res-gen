@@ -6,5 +6,4 @@ public class ResGenExtension {
     Integer jpegQuality;
     String[] mipmap;
     String[] mipmapDensities = ["hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
-    Boolean useScalePixelDimens = true
 }
