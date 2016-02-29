@@ -15,7 +15,7 @@ class ResGenPlugin implements Plugin<Project> {
         project.android.sourceSets.all { sourceSet ->
             sourceSet.extensions.create('pdf', DefaultSourceDirectorySet, 'pdf', project.fileResolver)
 
-            def resgen = new File(project.getProjectDir(), "src/$sourceSet.name")
+            def resgen = new File(project.getProjectDir(), "src/$sourceSet.name/res-gen")
             if (resgen.exists()) {
                 sourceSet.pdf.srcDirs += resgen.getAbsolutePath()
             }
