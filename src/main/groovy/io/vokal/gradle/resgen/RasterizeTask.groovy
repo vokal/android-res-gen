@@ -17,7 +17,7 @@
 package io.vokal.gradle.resgen
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.FileCollection
+import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputDirectory
@@ -34,7 +34,7 @@ class RasterizeTask extends DefaultTask {
      * The input PDFs.
      */
     @InputFiles
-    FileCollection sources
+    SourceDirectorySet sources
 
     /**
      * The output directory.
@@ -79,13 +79,25 @@ class RasterizeTask extends DefaultTask {
         List<File> PDFFiles = []
         inputs.outOfDate { InputFileDetails change ->
             logger.debug("$change.file.name out of date; converting")
-            PDFFiles.add change.file
+            if (change.file.name.endsWith(".pdf"))
+                PDFFiles.add change.file
         }
 
         Converter converter = new Converter()
-        PDFFiles.each { File PDFFile ->
-            PDFResource PDFResource = new PDFResource(PDFFile)
+        PDFFiles.each { File pdfFile ->
+            PDFResource PDFResource = new PDFResource(pdfFile)
             def name = PDFResource.getName()
+
+            def selector = ""
+            sources.srcDirs.each {
+                def pdfPath = pdfFile.toPath()
+                if (pdfPath.startsWith(it.toPath())) {
+                    int pathCount = it.toPath().nameCount
+                    int pdfCount = pdfPath.nameCount - 1
+                    if (pdfCount > pathCount)
+                        selector = pdfPath.subpath(it.toPath().nameCount, pdfPath.nameCount - 1).join("-") + "-"
+                }
+            }
 
             options.jpegPatterns.each { regex ->
                 if (name.matches(regex)) {
@@ -103,11 +115,11 @@ class RasterizeTask extends DefaultTask {
 
             if (mipmap) {
                 options.mipmapDensities.each { Density density ->
-                    converter.transcode(PDFResource, density, getResourceDir("mipmap", density))
+                    converter.transcode(PDFResource, density, getResourceDir("mipmap", selector, density))
                 }
             } else {
                 includeDensities.each { Density density ->
-                    converter.transcode(PDFResource, density, getResourceDir("drawable", density))
+                    converter.transcode(PDFResource, density, getResourceDir("drawable", selector, density))
                 }
             }
         }
@@ -152,8 +164,8 @@ class RasterizeTask extends DefaultTask {
         }
     }
 
-    File getResourceDir(String type, Density density) {
-        def resDir = new File(outputDir, "/${type}-${density.name().toLowerCase()}")
+    File getResourceDir(String type, String selector, Density density) {
+        def resDir = new File(outputDir, "/$type-$selector${density.name().toLowerCase()}")
         resDir.mkdirs()
         return resDir
     }

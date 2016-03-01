@@ -3,7 +3,7 @@ package io.vokal.gradle.resgen
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.file.FileCollection
+import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.internal.file.DefaultSourceDirectorySet
 
 class ResGenPlugin implements Plugin<Project> {
@@ -72,40 +72,35 @@ class ResGenPlugin implements Plugin<Project> {
                 throw new IllegalStateException('Android project must have applicationVariants or libraryVariants!')
             }
 
-            HashMap<String, File> pdfMap = new HashMap<>()
-
             variants.all { variant ->
                 def varNameCap = variant.name.capitalize()
 
+                SourceDirectorySet pdfSources = null
                 variant.sourceSets.each { src ->
-                    FileCollection pdfCollection = src.pdf.filter { File file ->
-                        file.name.endsWith '.pdf'
-                    }
-                    pdfCollection.each { pdf ->
-                        pdfMap.put(pdf.name, pdf)
+                    if (pdfSources == null) {
+                        pdfSources = src.pdf.asFileTree
+                    } else {
+                        pdfSources.source(src.pdf.asFileTree)
                     }
                 }
 
-                if (pdfMap.size() > 0) {
-                    FileCollection pdfFiles = project.files(pdfMap.values())
-                    String outDir = "$project.buildDir/generated/res/resgen/$variant.dirName/"
+                String outDir = "$project.buildDir/generated/res/resgen/$variant.dirName/"
 
-                    def rasterTaskName = "generate${varNameCap}ResRasterizePdf"
-                    Task rasterTask = project.task(rasterTaskName, type: RasterizeTask) {
-                        sources = pdfFiles
-                        outputDir = project.file(outDir)
-                        includeDensities = densities
-                        options = rasterizeOptions
-                    }
+                def rasterTaskName = "generate${varNameCap}ResRasterizePdf"
+                Task rasterTask = project.task(rasterTaskName, type: RasterizeTask) {
+                    sources = pdfSources
+                    outputDir = project.file(outDir)
+                    includeDensities = densities
+                    options = rasterizeOptions
+                }
 
-                    // we would do this but Android Studio to see the generated resources
-                    // (maybe it will be fixed in the future, does not work as of 2.0-beta6)
+                // we would do this but Android Studio to see the generated resources
+                // (maybe it will be fixed in the future, does not work as of 2.0-beta6)
 //                  variant.registerResGeneratingTask(rasterTask, rasterTask.outputDir)
 
-                    // so, we register dependency directly and add outputs to most specific source set
-                    project.tasks["generate${varNameCap}Resources"].dependsOn(rasterTaskName)
-                    variant.sourceSets[variant.sourceSets.size() - 1].res.srcDirs += outDir
-                }
+                // so, we register dependency directly and add outputs to most specific source set
+                project.tasks["generate${varNameCap}Resources"].dependsOn(rasterTaskName)
+                variant.sourceSets[variant.sourceSets.size() - 1].res.srcDirs += outDir
             }
         }
     }
