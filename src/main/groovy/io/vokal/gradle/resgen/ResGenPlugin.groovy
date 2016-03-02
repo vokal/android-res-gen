@@ -69,7 +69,7 @@ class ResGenPlugin implements Plugin<Project> {
             } else if (project.android.hasProperty('libraryVariants')) {
                 variants = project.android.libraryVariants
             } else {
-                throw new IllegalStateException('Android project must have applicationVariants or libraryVariants!')
+                return
             }
 
             variants.all { variant ->
