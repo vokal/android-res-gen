@@ -19,7 +19,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:${toolsVersion}'
-        classpath 'io.vokal.gradle:resgen:0.5.0'
+        classpath 'io.vokal.gradle:resgen:0.6.0'
     }
 }
 ~~~
@@ -32,8 +32,8 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:${toolsVersion}'
-        classpath files('libs/resgen-0.5.0.jar')
-        classpath 'org.apache.pdfbox:pdfbox:2.0.0-RC1'
+        classpath files('libs/resgen-0.6.0.jar')
+        classpath 'org.apache.pdfbox:pdfbox:2.0.0-RC3'
     }
 }
 
@@ -44,8 +44,6 @@ buildscript {
 ### Options
 
  * __densities__           [_array of strings_] - Default: ["hdpi", "xhdpi", "xxhdpi"]
- * __sourceDir__           [_string_]           - Default: "res-gen"
- * __generatedDir__        [_string_]           - Default: ".res-gen"
  * __jpeg__                [_array of strings_] - Usage: File pattern to match for jpeg rendering
  * __jpegQuality__         [_float_]            - Usage: Quality Range from 0 to 100
  * __mipmap__              [_array of strings_] - Usage: File pattern to match for mipmap rendering
@@ -58,12 +56,17 @@ apply plugin: 'io.vokal.resgen'
 
 android {
    …
+   // if PDF files are placed in a folder named 'res-gen' they will be recognized automatically
+   // or you can configure the location of your PDF files with the following
+   sourceSets {
+       main {
+           pdf.srcDir 'src/main/pdf'
+       }
+   }
 }
 
 resgen {
    densities "mdpi", "hdpi", "xhdpi", "xxhdpi" 
-   sourceDir "some-dir"
-   generatedDir ".hidden-dir" 
    jpeg "bg_*", "exact_filename" // may contain wildcards (* or ?) or regex
    jpegQuality 80 // default is 85 if only jpeg patterns specified
    mipmap "ic_launcher", "*_image" // names of assets you would like in mipmap folders (wildcard or regex accepted)
@@ -73,7 +76,7 @@ resgen {
 
 
 Densities are from the set: `["ldpi", "mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]`
-(xxxhdpi is only used for mipmapDensities)
+(xxxhdpi is only applicable for mipmapDensities)
 
 Place PDF assets file in `/main/src/res-gen` folder (or whatever your sourceDir is set to.)
 
@@ -93,8 +96,6 @@ res-gen/
 ~~~
 You must follow the [Qualifier name rules](http://developer.android.com/guide/topics/resources/providing-resources.html#QualifierRules) and order the nesting as Android expects. *(currently only accepts qualifiers listed before density (dpi) in the table)*
 
-Drawables are generated from PDF files as part of the build process or can be generated manually with gradle task `generateResFiles`.
-Generated drawables can be cleared out by the `clearResCache` task. The `clean` task also depends on this task.
-Drawables will be re-generated automatically if a newer PDF is found in the `res-gen` folder.
-
-If you change the generated file path, please manually delete any old generated items.
+Drawables are generated from PDF files as part of the build process or can be generated manually with gradle task `generate{variantName}ResRasterizePdf`.
+eg. `generateDebugResRasterizePdf`, `generateStageDebugResRasterizePdf`
+Drawables will be re-generated automatically when PDF file is updated.
