@@ -5,6 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.internal.file.DefaultSourceDirectorySet
+import org.gradle.api.internal.file.collections.DefaultDirectoryFileTreeFactory
 
 class ResGenPlugin implements Plugin<Project> {
 
@@ -13,7 +14,12 @@ class ResGenPlugin implements Plugin<Project> {
 
         // Add 'pdf' as a source set extension
         project.android.sourceSets.all { sourceSet ->
-            sourceSet.extensions.create('pdf', DefaultSourceDirectorySet, 'pdf', project.fileResolver)
+            def gradleVersion = Float.parseFloat(project.gradle.gradleVersion)
+            if (gradleVersion < 2.12f)
+                sourceSet.extensions.create('pdf', DefaultSourceDirectorySet, 'pdf', project.fileResolver)
+            else
+                sourceSet.extensions.create('pdf', DefaultSourceDirectorySet, 'pdf', project.fileResolver,
+                        new DefaultDirectoryFileTreeFactory())
 
             def resgen = new File(project.getProjectDir(), "src/$sourceSet.name/res-gen")
             if (resgen.exists()) {
