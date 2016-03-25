@@ -19,7 +19,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:${toolsVersion}'
-        classpath 'io.vokal.gradle:resgen:0.6.0'
+        classpath 'io.vokal.gradle:resgen:1.0.0'
     }
 }
 ~~~
@@ -32,8 +32,8 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:${toolsVersion}'
-        classpath files('libs/resgen-0.6.0.jar')
-        classpath 'org.apache.pdfbox:pdfbox:2.0.0-RC3'
+        classpath files('libs/resgen-1.0.0.jar')
+        classpath 'org.apache.pdfbox:pdfbox:2.0.0'
     }
 }
 

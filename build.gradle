@@ -37,6 +37,16 @@ dependencies {
     compile 'org.apache.pdfbox:pdfbox:2.0.0'
 }
 
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    classifier = 'sources'
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
 artifactory {
     contextUrl = "${artifactory_contextUrl}"   //The base Artifactory URL if not overridden by the publisher/resolver
     publish {
@@ -60,6 +70,8 @@ publishing {
         mavenJava(MavenPublication) {
             from components.java
             artifactId "resgen"
+            artifact sourcesJar
+            artifact javadocJar
         }
     }
 }
