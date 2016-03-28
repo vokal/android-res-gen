@@ -9,13 +9,7 @@ Automatic resource exporter plugin for android projects: generating density spec
 ~~~gradle
 buildscript {
     repositories {
-        maven {
-            url 'http://vokal-repo.ngrok.com/artifactory/repo'
-            credentials {
-                username = "${artifactory_user}"
-                password = "${artifactory_password}"
-            }
-        }
+        jcenter()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:${toolsVersion}'
