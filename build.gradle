@@ -21,7 +21,7 @@ apply plugin: 'groovy'
 apply plugin: 'maven-publish'
 
 group = 'io.vokal.gradle'
-version = '0.6.0'
+version = '1.0.0'
 
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
@@ -34,7 +34,17 @@ dependencies {
     compile gradleApi()
     compile localGroovy()
     compile 'com.android.tools.build:gradle:1.5.0'
-    compile 'org.apache.pdfbox:pdfbox:2.0.0-RC3'
+    compile 'org.apache.pdfbox:pdfbox:2.0.0'
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    classifier = 'sources'
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
 }
 
 artifactory {
@@ -60,6 +70,8 @@ publishing {
         mavenJava(MavenPublication) {
             from components.java
             artifactId "resgen"
+            artifact sourcesJar
+            artifact javadocJar
         }
     }
 }
