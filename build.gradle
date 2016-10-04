@@ -3,7 +3,7 @@ buildscript {
         jcenter()
         mavenCentral()
         maven {
-            url 'http://vokal-repo.ngrok.com/artifactory/repo'
+            url 'http://artifactory.vokal.io/artifactory/plugins-release'
             credentials {
                 username = "${artifactory_user}"
                 password = "${artifactory_password}"
@@ -21,7 +21,7 @@ apply plugin: 'groovy'
 apply plugin: 'maven-publish'
 
 group = 'io.vokal.gradle'
-version = '1.0.0'
+version = '1.0.1'
 
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
@@ -33,7 +33,7 @@ repositories {
 dependencies {
     compile gradleApi()
     compile localGroovy()
-    compile 'com.android.tools.build:gradle:1.5.0'
+    compile 'com.android.tools.build:gradle:2.1.2'
     compile 'org.apache.pdfbox:pdfbox:2.0.0'
 }
 
@@ -54,7 +54,7 @@ artifactory {
             repoKey = 'plugins-release-local'
             username = "${artifactory_user}"
             password = "${artifactory_password}"
-            maven = true
+//            maven = true
         }
         defaults {
             //This closure defines defaults for all 'artifactoryPublish' tasks of all projects the plugin is applied to
