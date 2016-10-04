@@ -14,12 +14,14 @@ class ResGenPlugin implements Plugin<Project> {
 
         // Add 'pdf' as a source set extension
         project.android.sourceSets.all { sourceSet ->
-            def gradleVersion = Float.parseFloat(project.gradle.gradleVersion)
-            if (gradleVersion < 2.12f)
-                sourceSet.extensions.create('pdf', DefaultSourceDirectorySet, 'pdf', project.fileResolver)
-            else
+            def (major, minor) = project.gradle.gradleVersion.tokenize(".")
+            if (minor.indexOf("-") > 0) minor = minor.substring(0, minor.indexOf("-"))
+            if (Integer.parseInt(major) >= 2 && Integer.parseInt(minor) >= 12) {
                 sourceSet.extensions.create('pdf', DefaultSourceDirectorySet, 'pdf', project.fileResolver,
                         new DefaultDirectoryFileTreeFactory())
+            } else {
+                sourceSet.extensions.create('pdf', DefaultSourceDirectorySet, 'pdf', project.fileResolver)
+            }
 
             def resgen = new File(project.getProjectDir(), "src/$sourceSet.name/res-gen")
             if (resgen.exists()) {
@@ -100,7 +102,7 @@ class ResGenPlugin implements Plugin<Project> {
                     options = rasterizeOptions
                 }
 
-                // we would do this but Android Studio to see the generated resources
+                // we would do this but Android Studio doesn't see the generated resources
                 // (maybe it will be fixed in the future, does not work as of 2.0-beta6)
 //                  variant.registerResGeneratingTask(rasterTask, rasterTask.outputDir)
 
