@@ -13,7 +13,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:${toolsVersion}'
-        classpath 'io.vokal.gradle:resgen:1.0.0'
+        classpath 'io.vokal.gradle:resgen:1.0.1'
     }
 }
 ~~~
@@ -26,7 +26,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:${toolsVersion}'
-        classpath files('libs/resgen-1.0.0.jar')
+        classpath files('libs/resgen-1.0.1.jar')
         classpath 'org.apache.pdfbox:pdfbox:2.0.0'
     }
 }
@@ -60,7 +60,7 @@ android {
 }
 
 resgen {
-   densities "mdpi", "hdpi", "xhdpi", "xxhdpi" 
+   densities "mdpi", "hdpi", "xhdpi", "xxhdpi"
    jpeg "bg_*", "exact_filename" // may contain wildcards (* or ?) or regex
    jpegQuality 80 // default is 85 if only jpeg patterns specified
    mipmap "ic_launcher", "*_image" // names of assets you would like in mipmap folders (wildcard or regex accepted)
