@@ -46,7 +46,6 @@ artifactory {
             repoKey = 'plugins-release-local'
             username = "${artifactory_user}"
             password = "${artifactory_password}"
-//            maven = true
         }
         defaults {
             //This closure defines defaults for all 'artifactoryPublish' tasks of all projects the plugin is applied to
